@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# returns true if <FILE>($2) contains a line that starts with $1 amount of spaces followed by a non-whitespace character
+hasIndent() { local -i n=$1 ; grep -sIqE "^ {$n}[^[:space:]]" "$2"; }
+
+# returns count of spaces constituting the deepest indentation in FILE($1)
+maxIndent() { while read; do { for((n=0;n<${#REPLY};n++)){ [[ "${REPLY:n:1}" == " " ]] || break; } ; printf '%i\n' $n ; }; done < "$1" | sort -n | tail -n1 2>/dev/null; }
+
+## FILE = $1 ;  logic() {
+#   if)      the amount of spaces that constitute FILE's deepest indentation is not divisable by 4,
+#   or)      FILE has a line which begins with 2 spaces followed by a non-whitespace character,
+#   then if) FILE has a line which begins with { ((n=deepest;n>0;n-=2)) } spaces followed by a non-whitespace character.
+# }; ( returns 2 || 4 )
+indentcrement() { local -i i=$(maxIndent "$1"); if hasIndent 2 "$1" || ((i%4==0)) ; then for((;i>0;i-=2)){ hasIndent $i "$1" || break; }; fi; printf '%i' $((i==0?2:4)) 2>/dev/null; }
+
+# prints $1 amount of consecutive ' ' characters
+spaces() { local -i i=$1 ; printf "%${i}s"; }
+
+# `intelligently` convert spaces to tabs and other personal preferences, normalize usage of commas, trim trailing whitespace
+normalize() { sed -i "s|$(spaces $1)|\t|g;s|\t  |\t\t|g;s|^  |\t|g;s|\s*[\=]\s*[\(]\s*| =(|g;s|\s*[)]\s*[\=][\>]\s*|)=> |g;s|\s*[\,]\s*|, |g;s|\s*$||g" "$2"; }
+
+[[ ! -f "$1" ]] || { normalize $(indentcrement "$1") "$1"; }
